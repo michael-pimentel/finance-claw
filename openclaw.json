@@ -7,6 +7,11 @@
     "auth": {
       "mode": "token",
       "token": "finance-claw-dev-token"
+    },
+    "http": {
+      "endpoints": {
+        "chatCompletions": { "enabled": true }
+      }
     }
   },
 

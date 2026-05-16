@@ -91,8 +91,12 @@ def main():
         log_locally(message)
         sys.exit(0)
 
-    success = send_telegram(bot_token, chat_id, message)
-    if not success:
+    chat_ids = [cid.strip() for cid in chat_id.split(",") if cid.strip()]
+    failed = False
+    for cid in chat_ids:
+        if not send_telegram(bot_token, cid, message):
+            failed = True
+    if failed:
         log_locally(message)
         sys.exit(1)
 
