@@ -6,14 +6,18 @@ import { createFetchPricesTool } from "./stock.js";
 import { createFetchNewsTool } from "./news.js";
 import { createSendAlertTool } from "./alerts.js";
 import { createCheckRecentAlertsTool } from "./memory.js";
+import { createFetchHistoricalPricesTool } from "./historical.js";
+import { createFetchInsiderTradesTool } from "./insider.js";
+import { createFetchEarningsCalendarTool } from "./earnings.js";
+import { createFetchSectorPerformanceTool } from "./sector.js";
 
 export default definePluginEntry({
   id: "finance-tools",
   name: "Finance Tools",
-  description: "Stock price monitoring, news fetching, and Telegram alerts for autonomous financial monitoring",
+  description:
+    "Stock price monitoring, technical analysis, insider trades, earnings calendar, sector context, and Telegram alerts for autonomous financial monitoring",
 
   register(api) {
-    // Step 2 — ping tool: verifies the plugin loads and the tool-call pipeline works
     api.registerTool({
       label: "Ping",
       name: "ping",
@@ -25,10 +29,15 @@ export default definePluginEntry({
       },
     });
 
-    // Steps 3–5 — real tools (stubs until each step is implemented)
     api.registerTool(createFetchPricesTool());
     api.registerTool(createFetchNewsTool());
     api.registerTool(createSendAlertTool());
     api.registerTool(createCheckRecentAlertsTool());
+
+    // New intelligence tools
+    api.registerTool(createFetchHistoricalPricesTool());
+    api.registerTool(createFetchInsiderTradesTool());
+    api.registerTool(createFetchEarningsCalendarTool());
+    api.registerTool(createFetchSectorPerformanceTool());
   },
 });

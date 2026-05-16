@@ -9,6 +9,7 @@
     "build:watch": "tsc -p tsconfig.json --watch",
     "test:prices": "tsx ../../scripts/test-fetch-prices.ts",
     "test:cycle": "tsx ../../scripts/test-cycle.ts",
+    "test:analysis": "tsx ../../scripts/test-full-analysis.ts",
     "typecheck": "tsc --noEmit"
   },
   "openclaw": {
