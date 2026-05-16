@@ -1,0 +1,25 @@
+{
+  "name": "@finance-claw/finance-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "FinanceClaw financial monitoring tools plugin",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch",
+    "test:prices": "tsx ../../scripts/test-fetch-prices.ts",
+    "test:cycle": "tsx ../../scripts/test-cycle.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "openclaw": {
+    "extensions": ["./src/index.ts"]
+  },
+  "dependencies": {
+    "typebox": "^1.1.38"
+  },
+  "devDependencies": {
+    "openclaw": "^2026.5.12",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  }
+}

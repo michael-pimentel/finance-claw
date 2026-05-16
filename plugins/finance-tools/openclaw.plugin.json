@@ -1,0 +1,19 @@
+{
+  "id": "finance-tools",
+  "name": "Finance Tools",
+  "description": "Stock price monitoring, news fetching, and Telegram alerts for FinanceClaw autonomous agent",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "contracts": {
+    "tools": [
+      "ping",
+      "fetch_prices",
+      "fetch_news",
+      "send_alert",
+      "check_recent_alerts"
+    ]
+  }
+}

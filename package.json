@@ -1,0 +1,18 @@
+{
+  "name": "finance-claw",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "dotenv -e .env -- openclaw gateway run",
+    "stop": "openclaw gateway stop 2>/dev/null || pkill -f 'openclaw gateway' || echo 'No gateway running'",
+    "dashboard": "open 'http://127.0.0.1:18789/?token=finance-claw-dev-token'",
+    "test:cycle": "node --import tsx/esm scripts/test-cycle.ts",
+    "seed:movement": "node --import tsx/esm scripts/seed-fake-movement.ts",
+    "typecheck": "tsc --noEmit -p plugins/finance-tools/tsconfig.json"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^8.0.0",
+    "openclaw": "^2026.5.12",
+    "tsx": "^4.19.2"
+  }
+}
