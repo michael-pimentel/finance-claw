@@ -66,11 +66,21 @@ export function createSendAlertTool() {
       url: Type.Optional(Type.String({ description: "URL of the most relevant article" })),
     }),
     execute: async (_id: string, params: AlertPayload) => {
+      // Hard dedup — enforce at code level regardless of whether the agent checked
+      const { getRecentAlerts } = await import("./memory.js");
+      const recent = getRecentAlerts(params.ticker, 4);
+      if (recent.length > 0) {
+        return jsonResult({
+          delivered: false,
+          skipped: true,
+          reason: `Duplicate suppressed — already alerted on ${params.ticker} at ${recent[0]!.created_at}`,
+        });
+      }
+
       const botToken = process.env["TELEGRAM_BOT_TOKEN"];
       const chatId = process.env["TELEGRAM_CHAT_ID"];
 
       if (!botToken || !chatId) {
-        // Telegram not configured — still record the alert so deduplication works
         recordAlert(params.ticker, params.summary, params.change_pct);
         return jsonResult({
           delivered: false,
