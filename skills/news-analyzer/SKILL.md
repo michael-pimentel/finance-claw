@@ -1,49 +1,57 @@
-# Skill: news-analyzer
+---
+name: news-analyzer
+description: >
+  Find and evaluate financial news for a flagged ticker.
+  Triggers when: a ticker is flagged by stock-fetcher, "why is X moving",
+  "news on NVDA", "what happened to TSLA", investigating a price move,
+  after any ticker crosses its alert threshold.
+---
 
-Fetches recent news headlines for a ticker to explain a price move.
+## How to Find News
 
-## Script
+For each flagged ticker:
 
-```
-python scripts/fetch_news.py NVDA
-```
+1. Call `web_search` with the query: `{TICKER} {COMPANY_NAME} stock news today`
+   - Example: `NVDA NVIDIA stock news today`
+   - Example: `TSLA Tesla stock news today`
+   - Example: `BTC-USD Bitcoin stock news today`
+
+2. Read the top 3–5 results. For each result assess:
+   - **Relevance** — is this actually about this company or its direct sector? (High / Med / Low)
+   - **Sentiment** — does the direction of the news match the price move direction?
+   - **Timing** — was it published in the last 24 hours? Does it precede the move?
+
+3. If the snippets are insufficient, call `web_fetch` on the URL of the most relevant result to read the full article.
+
+## Synthesize
+
+Write 1–2 sentences connecting the news to the price move. Be explicit:
+> "NVIDIA announced the GB300 chip lineup 2 hours before the spike. The product launch likely triggered institutional buying."
+
+If nothing correlates:
+> "No news found matching the timing or direction of this move."
+
+## Confidence Rating
+
+| Rating | Criteria |
+|---|---|
+| **HIGH** | Clear news catalyst, published before the move, direction matches |
+| **MEDIUM** | Relevant news but timing is loose or the link is indirect |
+| **LOW** | Tangential news or different sector |
+| **NO CORRELATION** | No relevant news found |
 
 ## Output Format
 
-Up to 5 headlines, most recent first:
 ```
-[1] Title: NVIDIA Announces New AI Partnership
-    Source: Reuters | Published: 2024-05-15 13:45 ET
-    URL: https://...
-    Summary: NVIDIA expanded its AI chip supply agreements with three Asian manufacturers...
-
-[2] Title: ...
+NEWS CORRELATION — NVDA (+2.41%)
+• "NVIDIA announces GB300 chip lineup" (Reuters, 2h ago) — Positive, High relevance
+• "Chip sector rallies on trade optimism" (Bloomberg, 4h ago) — Positive, Med relevance
+→ Likely cause: Product launch + sector tailwind
+→ Confidence: HIGH
 ```
 
-If no articles found:
-```
-NO_NEWS: No articles found for NVDA in the last 24 hours.
-```
+## Decision Gate
 
-## Data Sources
-
-Primary: Yahoo Finance RSS (`https://finance.yahoo.com/rss/headline?s={ticker}`)
-Fallback: NewsAPI (`NEWSAPI_KEY` env var — newsapi.ai UUID format or newsapi.org alphanumeric)
-
-## When to Call
-
-Only for tickers that crossed the movement threshold in the current cycle.
-Do not call for every ticker on every cycle.
-
-## Interpretation Guide
-
-When reading output, look for:
-- Earnings announcements or guidance changes
-- M&A activity (acquisition, merger, spinoff)
-- Regulatory action (SEC, FTC, FDA, DOJ)
-- Executive changes (CEO departure, new appointment)
-- Macro news affecting the sector (Fed rate decision, tariff policy)
-- Analyst rating changes or price target updates
-- Product launches or major contract wins
-
-If none of these appear and the move is ≥3%, flag the alert as "anomalous — no catalyst identified."
+- **HIGH or MEDIUM** → invoke **alert-sender** skill
+- **LOW or NO CORRELATION** and `|change| < 5%` → skip alert, log in session summary
+- **LOW or NO CORRELATION** and `|change| ≥ 5%` → alert anyway, flag as anomalous move

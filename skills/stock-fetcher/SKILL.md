@@ -1,38 +1,44 @@
-# Skill: stock-fetcher
+---
+name: stock-fetcher
+description: >
+  Fetch current stock prices for watched tickers.
+  Triggers when: heartbeat starts, "get prices", "check the market",
+  "what's NVDA at", "how is the market doing", start of monitoring cycle,
+  any ticker price question.
+---
 
-Fetches current stock prices for the watchlist tickers.
+## How to Fetch Prices
 
-## Script
+Read `USER.md` to get the current watchlist. For each ticker:
 
-```
-python scripts/fetch_prices.py NVDA TSLA AAPL SPY BTC-USD
-```
+1. Call `web_fetch` on `https://finance.yahoo.com/quote/{TICKER}`
+   - Stocks: `https://finance.yahoo.com/quote/NVDA`
+   - ETFs: `https://finance.yahoo.com/quote/SPY`
+   - Crypto: `https://finance.yahoo.com/quote/BTC-USD`
+
+2. From the returned page, locate and extract:
+   - **Current price** — the large number near the top beside the ticker symbol
+   - **% change** — shown as `+2.41%` or `-1.22%` directly below the price
+   - **Volume** — in the statistics table labeled "Volume"
+
+3. If `web_fetch` fails or the page does not load, record `ERROR: {TICKER} | fetch failed` and continue to the next ticker. Never abort the full batch.
 
 ## Output Format
 
-One line per ticker:
+Present results as a compact table before making any decisions:
+
 ```
-TICKER | price | change_pct% | volume | timestamp
+NVDA    | $913.42 | +2.41% | vol 48M
+TSLA    | $187.30 | -1.22% | vol 22M
+AAPL    | $211.05 | +0.18% | vol 31M
+SPY     | $524.60 | -0.31% | vol 89M
+BTC-USD | $67,240 | -0.89% | vol N/A
+ERROR   | FAKE    | fetch failed
 ```
 
-Example:
-```
-NVDA | 875.42 | +2.31% | 48291034 | 2024-05-15T14:32:00Z
-TSLA | 178.90 | -1.05% | 91234567 | 2024-05-15T14:32:00Z
-ERROR: BTC-USD | ticker not found via yfinance
-```
+## Next Step
 
-## Data Source
+Compare each ticker's `|% change|` against the threshold in `USER.md` (default 2.0%).
 
-Primary: `yfinance` (free, no key required)
-Fallback: Finnhub REST API (`FINNHUB_API_KEY` env var)
-
-## Error Handling
-
-- Bad ticker: print `ERROR: {TICKER} | {reason}` and continue
-- Network failure: print error line and continue — never abort the full fetch
-- Rate limit: single retry after 200ms, then error line
-
-## When to Call
-
-At the start of every monitoring cycle, for all watchlist tickers in one invocation.
+- If no ticker exceeds the threshold: output `Cycle complete — no significant movements.` and stop.
+- If any ticker exceeds the threshold: list them as `FLAGGED: NVDA (+2.41%), TSLA (-3.8%)` and invoke the **news-analyzer** skill for each one.

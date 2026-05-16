@@ -1,32 +1,39 @@
-# Skill: trend-memory
+---
+name: trend-memory
+description: >
+  Save session notes and patterns to persistent memory.
+  Triggers when: end of every heartbeat cycle, after an alert is sent,
+  "remember this", "log this", "save this pattern", session winding down.
+---
 
-Appends session summaries and observed patterns to MEMORY.md for cross-session learning.
+## How to Write to Memory
 
-## When to Use
-
-After completing a cycle where at least one alert was sent OR an anomalous pattern was observed.
+1. Call `read` on `MEMORY.md` to get the current contents
+2. Append your new line(s) to the correct section (do not overwrite anything)
+3. Call `write` to save the updated file back to `MEMORY.md`
 
 ## What to Write
 
-**Session summary line** (append to `## Session Notes` section):
+**After every heartbeat — one summary line under `## Session Notes`:**
 ```
-[2024-05-15 14:32 ET] NVDA +4.2% — APAC partnership news. Alerted.
-[2024-05-15 14:32 ET] TSLA -3.8% — No catalyst found. Anomalous move. Alerted.
-```
-
-**Pattern observation** (append to `## Observed Patterns` section, only when pattern is recurring):
-```
-NVDA: 3 alerts in 5 days — heightened volatility around earnings window.
+[2024-05-15 14:32 ET] Checked: NVDA TSLA AAPL SPY BTC-USD | Flagged: NVDA (+2.41%) | Alert: sent
+[2024-05-15 14:42 ET] Checked: NVDA TSLA AAPL SPY BTC-USD | Flagged: none | Alert: none
 ```
 
-## Format Rules
+**After an alert is sent — one entry under `## Alert History`:**
+```
+[2024-05-15 14:32 ET] NVDA +2.41% | Cause: GB300 chip announcement | Confidence: HIGH | Alert sent
+```
 
-- One line per event, always include ticker, move, and disposition (Alerted / Skipped / Error)
-- Timestamp in ET
-- Do not rewrite existing entries — only append
-- Maximum one pattern note per cycle to avoid bloat
+**When a recurring pattern emerges — one line under `## Observed Patterns`:**
+```
+NVDA: spikes consistently on NVIDIA product announcement days — 3 occurrences this week
+```
+Only write a pattern entry when you have seen it at least twice. One entry per pattern per day.
 
-## Implementation
+## Rules
 
-The pipeline script (`scripts/run_pipeline.py`) handles writing to MEMORY.md directly.
-This skill documents the contract; the writing logic lives in the pipeline.
+- Append only — never rewrite existing entries
+- One line per event — MEMORY.md is injected every session and token cost matters
+- Do not log raw page content or article text
+- Always include: timestamp, ticker, move size, and disposition (Alert sent / Skipped / Error)

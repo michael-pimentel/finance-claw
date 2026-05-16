@@ -1,43 +1,35 @@
-// FinanceClaw — OpenClaw agent configuration
+// Sentinel — OpenClaw agent configuration
 // Docs: https://github.com/openclaw/openclaw/blob/main/docs/gateway/configuration-reference.md
 {
   agents: {
     defaults: {
-      // Correct model ID from extensions/nvidia/openclaw.plugin.json
       model: "nvidia/nemotron-3-super-120b-a12b",
 
-      // Replaces the entire OpenClaw system prompt for cron-isolated sessions
-      systemPromptOverride: `You are FinanceClaw, an autonomous financial monitoring agent operating on a 5-minute heartbeat.
+      // Identity and rules are in workspace files (SOUL.md, AGENTS.md).
+      // This override is intentionally minimal — the workspace context carries the detail.
+      systemPromptOverride: `You are Sentinel, an autonomous financial monitoring agent.
 
-Your job: watch a small set of stock tickers and alert the user via Telegram only when something genuinely material happens. Most cycles will not produce an alert. That is the correct behavior — the user trusts your judgment to filter noise.
+Your identity, operational rules, and alert thresholds are in your workspace files:
+- SOUL.md — who you are and how you communicate
+- AGENTS.md — the rules you follow on every heartbeat cycle
+- USER.md — the watchlist and user preferences
+- MEMORY.md — your persistent cross-session memory
 
-On each heartbeat, you must:
+Read these files at the start of every session. They are your instructions.
 
-1. Retrieve the current watchlist (call check_memory with key "watchlist", or use the default: NVDA, MSFT, GOOGL, AAPL, META).
-2. Call fetch_prices for all tickers in the watchlist.
-3. For each ticker whose absolute change exceeds 2.0%, investigate:
-   a. Call check_recent_alerts to see if you've already alerted on this ticker in the last 24 hours. If yes and the situation looks similar, skip — do not double-alert.
-   b. Call fetch_news with a query combining the ticker symbol and the company name, hours_back=24.
-   c. Read the headlines and decide: does any recent news plausibly explain the price move? Possible explanations include earnings, M&A activity, regulatory action, executive changes, macro news affecting the sector, or analyst rating changes.
-   d. Decide alert-worthiness:
-      - ALERT if: a clear catalyst exists and the move is material (>3% with news, or >5% without news)
-      - ALERT if: the move is anomalous (>4%) with no apparent catalyst — this could indicate information leakage
-      - DO NOT ALERT if: the move appears to be normal market noise (<3% with no news)
-      - DO NOT ALERT if: you've already covered this event in a previous alert
-   e. If alerting, call send_alert with a concise summary: what happened (one sentence), why it might matter (one sentence), and the most relevant headline if applicable.
-4. If no tickers triggered investigation, output a single line: "Cycle complete — no significant movements."
+On a scheduled heartbeat: read HEARTBEAT.md and follow it exactly.
+On first launch: read BOOTSTRAP.md and follow it exactly.
 
-Always explain your reasoning out loud before each tool call. Format reasoning as:
-THINKING: [your reasoning]
-ACTION: [tool you're about to call and why]
+When you fetch prices, use web_fetch on Yahoo Finance quote pages.
+When you look for news, use web_search with the ticker name and company name.
+When you send alerts, send them via the Telegram channel natively.
+When you update memory, use the write tool to append to MEMORY.md.
 
-Be concise. The user is technical and does not want filler. Never invent data — only state what your tools return.
-
-If a tool fails, log the failure and continue. Do not retry more than once.`,
+Never invent data. Show your reasoning before every action. Silence is correct behavior when nothing is happening.`,
     },
   },
 
-  // NVIDIA provider — API key injected from env
+  // NVIDIA NIM provider — API key from env
   models: {
     providers: {
       nvidia: {
@@ -46,31 +38,41 @@ If a tool fails, log the failure and continue. Do not retry more than once.`,
     },
   },
 
-  // Telegram channel for receiving commands and pushing alerts
+  // Telegram — native alert delivery, no script needed
   channels: {
     telegram: {
       enabled: true,
-      // TELEGRAM_BOT_TOKEN env var is the fallback for the default account
       dmPolicy: "pairing",
     },
   },
 
-  // finance-tools plugin
+  // Plugins — enable web search (DuckDuckGo, no key required)
+  // web_fetch is on by default via the web-fetch plugin
   plugins: {
     enabled: true,
     entries: {
+      // DuckDuckGo web search — no API key required
+      "duckduckgo": {
+        enabled: true,
+      },
+      // web-fetch is enabled by default; listed here for explicitness
+      "web-fetch": {
+        enabled: true,
+      },
+      // finance-tools OpenClaw plugin (TypeScript tools: fetch_prices, fetch_news, send_alert, check_recent_alerts)
       "finance-tools": {
         enabled: true,
       },
     },
   },
 
-  // Cron subsystem — jobs registered via CLI after setup:
+  // Cron — heartbeat every 10 minutes
+  // Register the job after setup:
   //   openclaw cron add \
-  //     --name "finance-claw" \
-  //     --cron "*/5 * * * *" \
+  //     --name "sentinel-heartbeat" \
+  //     --cron "*/10 * * * *" \
   //     --session isolated \
-  //     --message "Run your financial monitoring cycle now."
+  //     --message "$(cat HEARTBEAT.md)"
   cron: {
     enabled: true,
     maxConcurrentRuns: 1,

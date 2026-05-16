@@ -1,48 +1,45 @@
-# Skill: alert-sender
+---
+name: alert-sender
+description: >
+  Send a formatted market alert to the user via Telegram.
+  Triggers when: news confidence is HIGH or MEDIUM, price move ≥ 5% regardless of news,
+  "send alert", "notify the user", "alert me about".
+  Do NOT trigger for sub-threshold moves or LOW/NO CORRELATION confidence.
+---
 
-Sends a formatted alert to the configured channel (Telegram or log file fallback).
+## Pre-Send Checklist
 
-## Script
+Verify all of these before sending. If any check fails, skip the alert and log the reason.
 
-```
-python scripts/send_telegram.py "NVDA +4.2% — NVIDIA expanded H100 partnerships in APAC. Likely catalyst."
-```
-
-Or via stdin:
-```
-echo "message" | python scripts/send_telegram.py
-```
-
-## Channels
-
-| Channel | Config | Script |
-|---|---|---|
-| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | `scripts/send_telegram.py` |
-| Slack | `SLACK_WEBHOOK_URL` | `scripts/send_slack.py` |
-| Log file | Always available as fallback | writes to `alerts.log` |
+- [ ] `|% change|` exceeds the ticker's threshold (from `USER.md`)
+- [ ] News confidence is HIGH or MEDIUM (or `|change| ≥ 5%`)
+- [ ] `MEMORY.md` Alert History does not contain this ticker in the same direction within the last 24 hours
 
 ## Alert Format
 
+Compose the message in this exact structure:
+
 ```
-📊 Sentinel Alert: {TICKER}
+🚨 SENTINEL ALERT
+━━━━━━━━━━━━━━━━
+Ticker:   NVDA
+Move:     +2.41%  ($892 → $913)
+Time:     2:34 PM ET
 
-{+/-}{change_pct}% — {summary}
+Why it matters:
+NVIDIA announced the GB300 chip 2h ago. Sector also up on
+trade optimism. Combined signal — high confidence move.
 
-📰 {headline}
-🔗 {url}
-
-{timestamp ET}
+Confidence: HIGH
+━━━━━━━━━━━━━━━━
 ```
 
-## Deduplication
+Keep "Why it matters" to 3 sentences maximum. No speculation beyond what the search results showed.
 
-The OpenClaw plugin's `check_recent_alerts` tool (SQLite-backed) handles deduplication.
-The Python scripts do not deduplicate — they send what they're told.
-Always call `check_recent_alerts` before calling this skill.
+## How to Send
 
-## Fallback Behavior
+Send the composed message via the Telegram channel. OpenClaw delivers it natively — no script, no HTTP call, just send the message through the channel.
 
-If `TELEGRAM_BOT_TOKEN` or `TELEGRAM_CHAT_ID` is not set:
-- Write to `alerts.log` in the project root
-- Print `[ALERT LOG] {message}` to stdout
-- Exit 0 (not an error — this is expected in dev mode)
+## After Sending
+
+Immediately invoke the **trend-memory** skill to record this alert in `MEMORY.md`.

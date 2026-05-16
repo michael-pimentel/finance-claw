@@ -1,21 +1,23 @@
 # Sentinel Memory
 
-## Persistent Alert Log
-
-Alerts are stored in SQLite at `~/.openclaw/finance-claw/alerts.db`.
-Each record: ticker, summary, change_pct, created_at.
-
 ## Session Notes
 
-<!-- Sentinel appends one line per cycle here when something noteworthy happens -->
-<!-- Format: [YYYY-MM-DD HH:MM ET] TICKER ±X.X% — one-line summary -->
+<!-- Sentinel appends one line per cycle here -->
+<!-- Format: [YYYY-MM-DD HH:MM ET] Checked: TICKERS | Flagged: TICKER (±X%) | Alert: sent/none -->
+<!-- Example: [2024-05-15 14:32 ET] Checked: NVDA TSLA AAPL SPY BTC-USD | Flagged: NVDA (+2.41%) | Alert: sent -->
+
+## Alert History
+
+<!-- Full entries for cycles where an alert was sent -->
+<!-- Format: [YYYY-MM-DD HH:MM ET] TICKER ±X.X% | Cause: description | Confidence: HIGH/MEDIUM | Alert sent -->
+<!-- Example: [2024-05-15 14:32 ET] NVDA +2.41% | Cause: GB300 chip announcement | Confidence: HIGH | Alert sent -->
 
 ## Observed Patterns
 
-<!-- Sentinel writes here when it detects a recurring pattern across sessions -->
-<!-- Example: NVDA tends to move on Wednesdays before options expiry -->
+<!-- Recurring patterns across multiple sessions — write at most once per day per pattern -->
+<!-- Example: NVDA: spikes consistently on NVIDIA product announcement days -->
 
 ## User Overrides
 
-<!-- Temporary overrides the user has communicated during a session -->
-<!-- Example: "ignore TSLA alerts this week — I already have a position" -->
+<!-- Temporary overrides from user instructions -->
+<!-- Example: [2024-05-15] Ignore TSLA alerts this week — user has existing position -->
