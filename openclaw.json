@@ -32,7 +32,7 @@
     "enabled": true,
     "load": {
       "paths": [
-        "/Users/michaelpimentel/UCSC/Hackathon_stuff/OpenClaw_Hacks/finance-claw/plugins/finance-tools"
+        "./plugins/finance-tools"
       ]
     }
   },
