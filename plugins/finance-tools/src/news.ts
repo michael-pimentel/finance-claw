@@ -4,20 +4,21 @@ import { textResult, type NewsItem } from "./types.js";
 const FINNHUB_BASE = "https://finnhub.io/api/v1";
 
 interface FinnhubNewsItem {
-  datetime: number; // unix timestamp
+  category: string;
+  datetime: number;
   headline: string;
+  id: number;
+  image: string;
+  related: string;
   source: string;
-  url: string;
   summary: string;
+  url: string;
 }
 
+// Extract the first ticker-like token from a query string, e.g. "NVDA NVIDIA" → "NVDA"
 function extractTicker(query: string): string {
-  // query is always "TICKER Company Name" — first token is the symbol
-  return query.split(/\s+/)[0]!.toUpperCase();
-}
-
-function dateString(date: Date): string {
-  return date.toISOString().slice(0, 10); // YYYY-MM-DD
+  const parts = query.trim().split(/\s+/);
+  return (parts[0] ?? query).toUpperCase();
 }
 
 export async function fetchNews(
@@ -25,15 +26,13 @@ export async function fetchNews(
   hoursBack: number,
   apiKey: string
 ): Promise<NewsItem[]> {
-  const to = new Date();
-  const from = new Date(to.getTime() - hoursBack * 60 * 60 * 1000);
+  const now = new Date();
+  const from = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
 
-  const url =
-    `${FINNHUB_BASE}/company-news` +
-    `?symbol=${encodeURIComponent(ticker)}` +
-    `&from=${dateString(from)}` +
-    `&to=${dateString(to)}` +
-    `&token=${apiKey}`;
+  const fromDate = from.toISOString().slice(0, 10);
+  const toDate = now.toISOString().slice(0, 10);
+
+  const url = `${FINNHUB_BASE}/company-news?symbol=${encodeURIComponent(ticker)}&from=${fromDate}&to=${toDate}&token=${apiKey}`;
 
   const res = await fetch(url);
 
@@ -42,14 +41,14 @@ export async function fetchNews(
   }
 
   if (!res.ok) {
-    throw new Error(`Finnhub news HTTP ${res.status}`);
+    throw new Error(`Finnhub HTTP ${res.status}`);
   }
 
-  const raw = (await res.json()) as FinnhubNewsItem[];
+  const data = (await res.json()) as FinnhubNewsItem[];
 
-  if (!Array.isArray(raw)) return [];
+  if (!Array.isArray(data) || data.length === 0) return [];
 
-  return raw
+  return data
     .filter((item) => item.headline && item.url)
     .sort((a, b) => b.datetime - a.datetime)
     .slice(0, 10)
@@ -58,7 +57,7 @@ export async function fetchNews(
       source: item.source,
       url: item.url,
       published_at: new Date(item.datetime * 1000).toISOString(),
-      description: item.summary ?? "",
+      description: item.summary?.slice(0, 300) ?? "",
     }));
 }
 
@@ -69,7 +68,7 @@ function buildNewsSummary(ticker: string, articles: NewsItem[], hoursBack: numbe
 
   const lines = articles.map((a, i) => {
     const time = new Date(a.published_at).toUTCString();
-    return `${i + 1}. [${a.source}] ${a.title} (${time})\n   ${a.description ? a.description.slice(0, 200) : "No summary."}\n   ${a.url}`;
+    return `${i + 1}. [${a.source}] ${a.title} (${time})\n   ${a.description || "No summary."}\n   ${a.url}`;
   });
 
   return `Found ${articles.length} article(s) for ${ticker} in the last ${hoursBack}h:\n\n${lines.join("\n\n")}`;
@@ -108,10 +107,15 @@ export function createFetchNewsTool() {
       }
 
       const ticker = extractTicker(params.query);
-      const hoursBack = params.hours_back ?? 24;
+      const hoursBack = Math.min(params.hours_back ?? 24, 72);
 
-      const articles = await fetchNews(ticker, hoursBack, apiKey);
-      return textResult(buildNewsSummary(ticker, articles, hoursBack), { articles });
+      try {
+        const articles = await fetchNews(ticker, hoursBack, apiKey);
+        return textResult(buildNewsSummary(ticker, articles, hoursBack), { articles });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return textResult(`Failed to fetch news for ${ticker}: ${msg}`, { articles: [], error: msg });
+      }
     },
   };
 }
