@@ -3,36 +3,47 @@ export type StreamChunk =
   | { type: 'done' }
   | { type: 'error'; message: string }
 
-/**
- * Sends queries to the OpenClaw agent via the gateway's chat completions endpoint
- * and yields streamed response chunks.
- */
+const SYSTEM_PROMPT = `You are FinanceClaw, an autonomous financial monitoring agent.
+
+RULES:
+- Be fast and sharp. No filler. No disclaimers. Every sentence must carry information.
+- Never give buy/sell recommendations.
+- Never invent data — if you don't have current prices, say so directly.
+- Keep responses tight: max 6-8 sentences for analysis, 2-3 for quick questions.
+- Use plain text, no markdown headers.
+
+You are answering questions about markets. If the user asks about specific prices or today's moves,
+note that you don't have live data in this context but can reason about the companies and sectors.`
+
 export async function* streamAgentQuery(
   text: string,
-  sessionKey = 'dashboard-user'
 ): AsyncGenerator<StreamChunk> {
   let response: Response
 
   try {
-    response = await fetch('/api/v1/chat/completions', {
+    response = await fetch('/api/nvidia/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'openclaw',
-        messages: [{ role: 'user', content: text }],
+        model: 'nvidia/nemotron-3-super-120b-a12b',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: text },
+        ],
         stream: true,
-        user: sessionKey,
+        max_tokens: 512,
+        temperature: 0.3,
       }),
     })
   } catch {
-    yield { type: 'error', message: 'Cannot reach OpenClaw gateway. Is it running on port 18789?' }
+    yield { type: 'error', message: 'Cannot reach NVIDIA API. Check network.' }
     return
   }
 
   if (!response.ok) {
     let detail = ''
     try { detail = await response.text() } catch { /* ignore */ }
-    yield { type: 'error', message: `Agent responded ${response.status}: ${detail.slice(0, 120)}` }
+    yield { type: 'error', message: `Agent error ${response.status}: ${detail.slice(0, 120)}` }
     return
   }
 
@@ -57,22 +68,13 @@ export async function* streamAgentQuery(
       for (const line of lines) {
         const trimmed = line.trim()
         if (!trimmed.startsWith('data:')) continue
-
         const data = trimmed.slice(5).trim()
-        if (data === '[DONE]') {
-          yield { type: 'done' }
-          return
-        }
-
+        if (data === '[DONE]') { yield { type: 'done' }; return }
         try {
-          const chunk = JSON.parse(data) as {
-            choices?: Array<{ delta?: { content?: string } }>
-          }
+          const chunk = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> }
           const content = chunk.choices?.[0]?.delta?.content
           if (content) yield { type: 'text', content }
-        } catch {
-          // malformed SSE chunk — skip
-        }
+        } catch { /* malformed chunk */ }
       }
     }
   } finally {

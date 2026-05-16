@@ -6,7 +6,7 @@ import MarketPanel from './components/MarketPanel'
 import EventStream from './components/EventStream'
 import QueryInput from './components/QueryInput'
 
-const WATCHLIST = ['NVDA', 'MSFT', 'GOOGL', 'AAPL', 'META']
+const WATCHLIST = ['NVDA', 'AMD', 'TSLA', 'MSFT', 'GOOGL', 'AAPL', 'META', 'AMZN', 'TSM', 'AVGO', 'PLTR', 'ARM']
 const SPARKLINE_MAX_POINTS = 24
 const AUTO_INSIGHT_THRESHOLD_PCT = 2.5
 const AUTO_INSIGHT_COOLDOWN_MS = 20 * 60 * 1000 // 20 min per ticker
@@ -67,7 +67,7 @@ export default function App() {
     const id = startStreamingEvent(eventKind, ticker)
     let hasContent = false
 
-    for await (const chunk of streamAgentQuery(queryText, 'dashboard-user')) {
+    for await (const chunk of streamAgentQuery(queryText)) {
       if (chunk.type === 'text') {
         appendStreamingEvent(id, chunk.content)
         hasContent = true

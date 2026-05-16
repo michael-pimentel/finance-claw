@@ -2,28 +2,33 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
-const GATEWAY = 'http://127.0.0.1:18789'
-const TOKEN = 'finance-claw-dev-token'
+const FINNHUB_TOKEN = 'd83btq9r01qjsh1kvgigd83btq9r01qjsh1kvgj0'
+const NVIDIA_API_KEY = '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'
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __FINNHUB_TOKEN__: JSON.stringify(FINNHUB_TOKEN),
+  },
   server: {
     port: 4173,
     proxy: {
-      '/api': {
-        target: GATEWAY,
+      '/api/finnhub': {
+        target: 'https://finnhub.io/api/v1',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        rewrite: (path) => path.replace(/^\/api\/finnhub/, ''),
+      },
+      '/api/nvidia': {
+        target: 'https://integrate.api.nvidia.com/v1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/nvidia/, ''),
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {
-            proxyReq.setHeader('Authorization', `Bearer ${TOKEN}`)
+            proxyReq.setHeader('Authorization', `Bearer ${NVIDIA_API_KEY}`)
           })
-          // Log proxy errors so gateway connection issues surface clearly
           proxy.on('error', (_err: Error, _req: IncomingMessage, res: ServerResponse) => {
-            if (!res.headersSent) {
-              res.writeHead(502, { 'Content-Type': 'application/json' })
-            }
-            res.end(JSON.stringify({ error: 'gateway_unavailable', message: 'OpenClaw gateway not reachable at port 18789. Run: pnpm start' }))
+            if (!res.headersSent) res.writeHead(502, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: 'nvidia_unavailable' }))
           })
         },
       },
